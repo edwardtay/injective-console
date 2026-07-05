@@ -1,0 +1,8 @@
+name = "injective-console"
+compatibility_date = "2024-12-01"
+
+# Set your account via `wrangler login` or the CLOUDFLARE_ACCOUNT_ID env var.
+# (account_id is intentionally not committed.)
+
+[assets]
+directory = "./public"

@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Injective EVM Console</title>
+<meta name="description" content="A working dev console for Injective EVM (chain 1776): RPC failover, live block feed, a JSON-RPC console, a precompile registry that executes calls, an address inspector, and 0x-to-inj derivation. Built by Edward Tay as a work sample." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230e63f4'/%3E%3Ctext x='32' y='45' font-size='32' text-anchor='middle' fill='%23ffffff' font-family='monospace' font-weight='bold'%3Ei%3C/text%3E%3C/svg%3E" />
+<meta name="theme-color" content="#ffffff" />
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eef1f5; --card:#ffffff; --line:#e3e7ee; --line2:#eef1f5;
+    --ink:#111826; --mut:#667085; --mut2:#93a0b4;
+    --acc:#0e63f4; --accbg:#e9f1ff; --accln:#c6dbff;
+    --grn:#12a150; --red:#e5484d; --amb:#b7791f; --max:1200px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:13px;line-height:1.4;-webkit-font-smoothing:antialiased}
+  .mono{font-family:'JetBrains Mono',monospace}
+  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+
+  .bar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .bar-in{max-width:var(--max);margin:0 auto;height:48px;display:flex;align-items:center;gap:12px;padding:0 16px}
+  .logo{width:22px;height:22px;border-radius:6px;background:var(--acc);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;flex:none}
+  .title{font-weight:600;letter-spacing:-.01em}
+  .tag{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--acc);background:var(--accbg);border:1px solid var(--accln);padding:2px 7px;border-radius:5px}
+  .spacer{flex:1}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--mut);background:var(--card);border:1px solid var(--line);border-radius:20px;padding:4px 10px;white-space:nowrap}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--mut2);flex:none}
+  .dot.ok{background:var(--grn)} .dot.bad{background:var(--red)} .dot.live{background:var(--acc)}
+  .btn{font:inherit;font-size:12px;font-weight:600;border:0;border-radius:7px;padding:6px 12px;cursor:pointer;background:var(--acc);color:#fff;white-space:nowrap}
+  .btn:hover{filter:brightness(1.05)} .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.g{background:var(--card);color:var(--ink);border:1px solid var(--line)} .btn.g:hover{border-color:#cdd4df;filter:none}
+  .btn.sm{padding:4px 9px;font-size:11px}
+
+  .wrap{max-width:var(--max);margin:0 auto;padding:14px 16px 32px}
+  .grid{display:grid;gap:12px}
+  .g6{grid-template-columns:repeat(6,1fr)} .g2{grid-template-columns:1fr 1fr}
+  @media(max-width:900px){.g2{grid-template-columns:1fr}.g6{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:520px){.g6{grid-template-columns:repeat(2,1fr)}}
+  .col{display:grid;gap:12px;align-content:start}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:11px}
+  .hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line2)}
+  .hd h2{margin:0;font-size:12.5px;font-weight:600} .hd .n{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mut2);margin-right:7px}
+  .bd{padding:12px 14px}
+  .lbl{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);font-weight:600}
+
+  .tile{padding:11px 13px}
+  .tile .k{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);font-weight:600}
+  .tile .v{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:500;margin-top:3px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tile .v small{font-size:11px;color:var(--mut);font-weight:400}
+
+  input.f,select.f,textarea.f{font:inherit;font-family:'JetBrains Mono',monospace;font-size:11.5px;width:100%;background:#fbfcfe;border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:7px 9px}
+  input.f:focus,select.f:focus,textarea.f:focus{outline:none;border-color:var(--acc);background:#fff}
+  select.f{cursor:pointer}
+  textarea.f{resize:vertical;line-height:1.5}
+  .row{display:flex;align-items:center;gap:9px}
+  .chip{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--line2);border:1px solid var(--line);border-radius:6px;padding:3px 7px;color:#334155;white-space:nowrap}
+  .out{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--mut);word-break:break-all;line-height:1.5}
+  pre.out{background:#0d1117;color:#c9d1d9;border-radius:8px;padding:10px 12px;margin:0;max-height:220px;overflow:auto;white-space:pre-wrap;word-break:break-all;font-size:11px}
+  .muted{color:var(--mut)} .ck{accent-color:var(--acc)}
+  .note{font-size:11px;color:var(--mut2);margin-top:10px}
+  table.t{width:100%;border-collapse:collapse;font-size:11.5px}
+  table.t td{padding:7px 6px;border-top:1px solid var(--line2);vertical-align:middle}
+  table.t tr:first-child td{border-top:0}
+  .feed .r{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--line2);font-family:'JetBrains Mono',monospace;font-size:11.5px}
+  .feed .r:first-child{border-top:0}
+  .bar-mini{height:4px;border-radius:2px;background:var(--line);overflow:hidden;width:52px}
+  .bar-mini > i{display:block;height:100%;background:var(--acc)}
+  footer{max-width:var(--max);margin:0 auto;padding:6px 16px 24px;color:var(--mut2);font-size:11px;display:flex;gap:16px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<div class="bar"><div class="bar-in">
+  <div class="logo">i</div>
+  <span class="title">Injective EVM Console</span>
+  <span class="tag">work sample</span>
+  <span class="spacer"></span>
+  <span class="pill"><span id="netdot" class="dot"></span><span id="netpill">chain 1776</span></span>
+  <span class="pill" id="acctpill" style="display:none"></span>
+  <button id="connect" class="btn">Connect</button>
+</div></div>
+
+<div class="wrap">
+
+  <!-- STAT STRIP -->
+  <div class="grid g6" style="margin-bottom:12px">
+    <div class="card tile"><div class="k">Chain ID</div><div id="v-chain" class="v">&middot;&middot;&middot;</div></div>
+    <div class="card tile"><div class="k">Block</div><div id="v-block" class="v">&middot;&middot;&middot;</div></div>
+    <div class="card tile"><div class="k">Gas price</div><div id="v-gas" class="v">&middot;&middot;&middot;</div></div>
+    <div class="card tile"><div class="k">Base fee</div><div id="v-base" class="v">&middot;&middot;&middot;</div></div>
+    <div class="card tile"><div class="k">Block time</div><div id="v-bt" class="v">&middot;&middot;&middot;</div></div>
+    <div class="card tile"><div class="k">Your balance</div><div id="v-bal" class="v">&middot;&middot;&middot;</div></div>
+  </div>
+
+  <!-- NATIVE MARKETS -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="hd">
+      <h2><span class="n">&#9733;</span>Native markets &middot; exchange module</h2>
+      <div class="row" style="gap:6px">
+        <button id="mkt-spot" class="btn sm">spot <span id="mkt-spot-n" class="muted"></span></button>
+        <button id="mkt-deriv" class="btn g sm">perp <span id="mkt-deriv-n" class="muted"></span></button>
+      </div>
+    </div>
+    <div class="bd">
+      <input id="mkt-q" class="f" placeholder="filter ticker... (e.g. INJ)" style="margin-bottom:8px">
+      <div id="mkt-list" style="max-height:220px;overflow:auto"><div class="muted" style="font-size:11.5px">loading markets&hellip;</div></div>
+      <div class="note">Live from the Injective LCD (exchange module), the native on-chain order book. This is the same module a Solidity contract reaches through the exchange precompile in panel 05.</div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <!-- LEFT COLUMN -->
+    <div class="col">
+      <!-- RPC -->
+      <div class="card">
+        <div class="hd"><h2><span class="n">01</span>RPC failover</h2>
+          <label class="row muted" style="font-size:11px"><input id="auto" type="checkbox" class="ck"> auto 8s</label>
+        </div>
+        <div class="bd">
+          <div style="margin-bottom:9px">
+            <div class="row" style="justify-content:space-between;margin-bottom:3px"><span class="lbl">primary</span><span id="s1" class="mono" style="font-size:11px;color:var(--mut2)">idle</span></div>
+            <div class="row"><span id="d1" class="dot"></span><input id="rpc1" class="f" value="https://sentry.evm-rpc.injective.network"></div>
+          </div>
+          <div>
+            <div class="row" style="justify-content:space-between;margin-bottom:3px"><span class="lbl">fallback</span><span id="s2" class="mono" style="font-size:11px;color:var(--mut2)">idle</span></div>
+            <div class="row"><span id="d2" class="dot"></span><input id="rpc2" class="f" value="https://1776.rpc.thirdweb.com"></div>
+          </div>
+          <div class="row" style="justify-content:space-between;margin-top:11px">
+            <button id="check" class="btn sm">Check endpoints</button>
+            <span id="active" class="mono" style="font-size:11px;color:var(--mut)"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE BLOCKS -->
+      <div class="card">
+        <div class="hd"><h2><span class="n">02</span>Live blocks</h2><span id="feed-tag" class="lbl">latest 6</span></div>
+        <div class="bd"><div id="feed" class="feed"><div class="muted" style="font-size:11.5px">loading blocks&hellip;</div></div></div>
+      </div>
+
+      <!-- ADDRESS INSPECTOR -->
+      <div class="card">
+        <div class="hd"><h2><span class="n">03</span>Address inspector</h2><button id="inspect" class="btn g sm">Inspect</button></div>
+        <div class="bd">
+          <input id="insp-in" class="f" placeholder="0x address or contract...">
+          <div id="insp-out" class="out" style="margin-top:9px">balance, and whether the address is a contract (via eth_getCode).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="col">
+      <!-- JSON-RPC CONSOLE -->
+      <div class="card">
+        <div class="hd"><h2><span class="n">04</span>JSON-RPC console</h2><button id="send" class="btn sm">Send</button></div>
+        <div class="bd">
+          <div class="row" style="gap:8px;margin-bottom:8px">
+            <select id="method" class="f" style="flex:1.4"></select>
+            <input id="params" class="f" style="flex:2" value="[]">
+          </div>
+          <pre id="rpc-out" class="out">pick a method and Send. Runs against the active RPC.</pre>
+        </div>
+      </div>
+
+      <!-- PRECOMPILE REGISTRY -->
+      <div class="card">
+        <div class="hd"><h2><span class="n">05</span>Precompile registry</h2><button id="probe-all" class="btn g sm">Run all</button></div>
+        <div class="bd">
+          <table class="t"><tbody id="pc-rows"></tbody></table>
+          <div class="note">Standard EVM precompiles (0x01-0x09) exist on every EVM chain; the exchange precompile is Injective-native. Each row makes a real <span class="mono">eth_call</span>.</div>
+        </div>
+      </div>
+
+      <!-- 0x -> inj -->
+      <div class="card">
+        <div class="hd"><h2><span class="n">06</span>Address 0x &rarr; inj</h2><button id="derive" class="btn g sm">Derive</button></div>
+        <div class="bd">
+          <input id="addr-in" class="f" placeholder="0x... (auto-fills on connect)">
+          <div class="row" style="margin-top:9px"><span class="lbl" style="flex:none">inj</span><span id="inj-out" class="mono" style="font-size:11.5px;color:var(--acc);word-break:break-all">&middot;&middot;&middot;</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">&#9432; Independent work sample by Edward Tay for an Injective Labs application. Read-only, every value is a live Injective mainnet call. Not affiliated with Injective Labs.</div>
+</div>
+
+<footer>
+  <a href="https://injective.edwardtay.com">&#8592; Engineering homework</a>
+  <a href="https://docs.injective.network/developers-evm/precompiles" target="_blank" rel="noopener noreferrer">Precompiles docs &#8599;</a>
+  <span class="mono">Injective Labs &middot; Growth / Integration Engineer &middot; edwardtay.com</span>
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const CHAIN_ID = 1776, CHAIN_HEX = '0x6f0';
+let activeRpc = $('rpc1').value, connectedAddr = null, feed = [];
+
+async function rpc(url, method, params=[]) {
+  const t = performance.now();
+  const res = await fetch(url, { method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify({ jsonrpc:'2.0', id:1, method, params }) });
+  const j = await res.json();
+  const ms = Math.round(performance.now() - t);
+  if (j.error) throw Object.assign(new Error(j.error.message||'rpc error'), { ms });
+  return { result: j.result, ms };
+}
+const g = (h,d=9) => (Number(BigInt(h))/10**d);
+const fmtGwei = h => g(h,9).toFixed(2);
+const fmtInj  = h => g(h,18).toFixed(4);
+const short = s => s.length>18 ? s.slice(0,10)+'…'+s.slice(-6) : s;
+
+/* ---- 01 RPC failover ---- */
+async function pingOne(url, d, s) {
+  $(d).className = 'dot'; $(s).textContent = 'checking';
+  try { const { result, ms } = await rpc(url, 'eth_blockNumber');
+    $(d).className = 'dot ok'; $(s).innerHTML = `${ms}ms &middot; #${parseInt(result,16).toLocaleString()}`;
+    return { url, ms, ok:true };
+  } catch(e){ $(d).className = 'dot bad'; $(s).innerHTML = `<span style="color:var(--red)">down</span>`; return { url, ms:Infinity, ok:false }; }
+}
+async function checkEndpoints() {
+  const [a,b] = await Promise.all([ pingOne($('rpc1').value,'d1','s1'), pingOne($('rpc2').value,'d2','s2') ]);
+  const up = [a,b].filter(x=>x.ok).sort((x,y)=>x.ms-y.ms);
+  if (up.length){ activeRpc = up[0].url; $('active').innerHTML = `active &rarr; <span style="color:var(--acc)">${up[0].url.replace('https://','').split('.')[0]}</span> ${up[0].ms}ms`; }
+  else $('active').innerHTML = '<span style="color:var(--red)">no healthy endpoint</span>';
+  return up.length>0;
+}
+
+/* ---- stats + 02 live blocks ---- */
+function setNet(cid){ const ok = cid===CHAIN_ID; $('netdot').className='dot '+(ok?'live':'bad'); $('netpill').textContent = ok?'Injective 1776':'chain '+cid; }
+async function getBlock(tag){ const { result } = await rpc(activeRpc,'eth_getBlockByNumber',[tag,false]); return result; }
+function renderFeed(){
+  if(!feed.length){ return; }
+  const now = Math.floor(Date.now()/1000);
+  $('feed').innerHTML = feed.map(b=>{
+    const n = parseInt(b.number,16), ts = parseInt(b.timestamp,16);
+    const age = Math.max(0, now-ts), txs = b.transactions.length;
+    const used = b.gasUsed?Number(BigInt(b.gasUsed)):0, lim = b.gasLimit?Number(BigInt(b.gasLimit)):1;
+    const pct = Math.min(100, Math.round(used/lim*100));
+    return `<div class="r"><span style="color:var(--acc)">#${n.toLocaleString()}</span>
+      <span class="muted">${age}s ago</span>
+      <span class="muted">${txs} tx</span>
+      <span class="row" style="gap:6px"><span class="bar-mini"><i style="width:${pct}%"></i></span><span class="muted" style="width:30px;text-align:right">${pct}%</span></span></div>`;
+  }).join('');
+}
+async function tick() {
+  try {
+    const [c,gp,latest] = await Promise.all([ rpc(activeRpc,'eth_chainId'), rpc(activeRpc,'eth_gasPrice'), getBlock('latest') ]);
+    const cid = parseInt(c.result,16); setNet(cid);
+    $('v-chain').innerHTML = cid + (cid===CHAIN_ID?' <small style="color:var(--grn)">&#10003;</small>':'');
+    $('v-block').textContent = parseInt(latest.number,16).toLocaleString();
+    $('v-gas').innerHTML = fmtGwei(gp.result)+' <small>Gwei</small>';
+    $('v-base').innerHTML = latest.baseFeePerGas ? fmtGwei(latest.baseFeePerGas)+' <small>Gwei</small>' : '<small>n/a</small>';
+    // feed: prepend if new
+    if(!feed.length || feed[0].number!==latest.number){
+      feed.unshift(latest); feed = feed.slice(0,6);
+      if(feed.length>=2){ const dt = parseInt(feed[0].timestamp,16)-parseInt(feed[1].timestamp,16); $('v-bt').innerHTML = dt+' <small>s</small>'; }
+    }
+    renderFeed();
+    if(connectedAddr){ const bal = await rpc(activeRpc,'eth_getBalance',[connectedAddr,'latest']); $('v-bal').innerHTML = fmtInj(bal.result)+' <small>INJ</small>'; }
+    else $('v-bal').innerHTML = '<small>connect</small>';
+  } catch(e){ $('v-block').innerHTML='<small style="color:var(--red)">read failed</small>'; }
+}
+async function backfill(){
+  try {
+    const bn = await rpc(activeRpc,'eth_blockNumber'); const top = parseInt(bn.result,16);
+    const nums = []; for(let i=0;i<6;i++) nums.push('0x'+(top-i).toString(16));
+    feed = await Promise.all(nums.map(getBlock));
+    if(feed.length>=2){ const dt = parseInt(feed[0].timestamp,16)-parseInt(feed[1].timestamp,16); $('v-bt').innerHTML = dt+' <small>s</small>'; }
+    renderFeed();
+  } catch(e){ $('feed').innerHTML='<span class="muted">block feed unavailable</span>'; }
+}
+
+/* ---- 03 address inspector ---- */
+async function inspect(){
+  const a = ($('insp-in').value||'').trim(); const o = $('insp-out');
+  if(!/^0x[0-9a-fA-F]{40}$/.test(a)){ o.textContent='enter a valid 0x address'; return; }
+  o.innerHTML='reading&hellip;';
+  try {
+    const [bal,code] = await Promise.all([ rpc(activeRpc,'eth_getBalance',[a,'latest']), rpc(activeRpc,'eth_getCode',[a,'latest']) ]);
+    const isC = code.result && code.result!=='0x';
+    const size = isC ? (code.result.length-2)/2 : 0;
+    o.innerHTML = `balance <b>${fmtInj(bal.result)} INJ</b><br>type ${isC?`<span style="color:var(--acc)">contract</span> &middot; ${size.toLocaleString()} bytes`:'<span class="muted">EOA (no code)</span>'}<br>inj &rarr; <span style="color:var(--acc)">${short(toInj(a))}</span>`;
+  } catch(e){ o.innerHTML='<span style="color:var(--red)">'+e.message.slice(0,60)+'</span>'; }
+}
+
+/* ---- 04 JSON-RPC console ---- */
+const METHODS = {
+  eth_blockNumber:'[]', eth_chainId:'[]', eth_gasPrice:'[]', web3_clientVersion:'[]', net_version:'[]',
+  eth_getBlockByNumber:'["latest", false]',
+  eth_getBalance:'["0x0000000000000000000000000000000000000000", "latest"]',
+  eth_getCode:'["0x0000000000000000000000000000000000000065", "latest"]',
+  eth_getTransactionByHash:'["0x..."]',
+  eth_call:'[{"to":"0x0000000000000000000000000000000000000004","data":"0x48656c6c6f"}, "latest"]',
+};
+function initConsole(){
+  $('method').innerHTML = Object.keys(METHODS).map(m=>`<option value="${m}">${m}</option>`).join('');
+  $('method').onchange = e => { $('params').value = METHODS[e.target.value]; };
+}
+async function send(){
+  const m = $('method').value; const o = $('rpc-out');
+  let p; try { p = JSON.parse($('params').value||'[]'); } catch(e){ o.textContent='params must be valid JSON array'; return; }
+  o.textContent='...';
+  try { const { result, ms } = await rpc(activeRpc, m, p);
+    o.textContent = `// ${ms}ms\n` + JSON.stringify(result, null, 2);
+  } catch(e){ o.textContent = 'error: '+e.message; }
+}
+
+/* ---- 05 precompile registry ---- */
+const PC = [
+  { name:'Injective exchange', addr:'0x0000000000000000000000000000000000000065', data:'0x', kind:'inj' },
+  { name:'identity (0x04)',     addr:'0x0000000000000000000000000000000000000004', data:'0x48656c6c6f', kind:'echo', expect:'0x48656c6c6f' },
+  { name:'sha256 (0x02)',       addr:'0x0000000000000000000000000000000000000002', data:'0x616263', kind:'hash', expect:'0xba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad' },
+];
+function initPC(){
+  $('pc-rows').innerHTML = PC.map((p,i)=>`<tr>
+    <td style="font-weight:600">${p.name}</td>
+    <td class="mono muted">${p.addr.slice(0,10)}…${p.addr.slice(-4)}</td>
+    <td style="text-align:right"><button class="btn g sm" data-pc="${i}">probe</button></td>
+    <td id="pc-${i}" class="mono muted" style="min-width:120px">idle</td></tr>`).join('');
+  document.querySelectorAll('[data-pc]').forEach(b=> b.onclick=()=>probePC(+b.dataset.pc));
+}
+async function probePC(i){
+  const p = PC[i], cell = $('pc-'+i); cell.innerHTML='...';
+  try {
+    const { result } = await rpc(activeRpc,'eth_call',[{ to:p.addr, data:p.data },'latest']);
+    if(p.kind==='echo') cell.innerHTML = result===p.expect ? '<span style="color:var(--grn)">&#10003; echoed input</span>' : 'ret '+result.slice(0,18)+'…';
+    else if(p.kind==='hash') cell.innerHTML = result===p.expect ? '<span style="color:var(--grn)">&#10003; sha256(abc)</span>' : result.slice(0,18)+'…';
+    else cell.innerHTML = (result&&result!=='0x') ? '<span style="color:var(--grn)">&#10003; '+result.slice(0,14)+'…</span>' : '0x (needs args)';
+  } catch(e){
+    cell.innerHTML = p.kind==='inj' ? '<span style="color:var(--acc)">&#10003; live, reverted empty</span>' : '<span style="color:var(--red)">'+e.message.slice(0,22)+'</span>';
+  }
+}
+
+/* ---- 06 bech32 ---- */
+const CH='qpzry9x8gf2tvdw0s3jn54khce6mua7l', GEN=[0x3b6a57b2,0x26508e6d,0x1ea119fa,0x3d4233dd,0x2a1462b3];
+function pm(v){let c=1;for(const p of v){const t=c>>25;c=((c&0x1ffffff)<<5)^p;for(let i=0;i<5;i++)if((t>>i)&1)c^=GEN[i];}return c;}
+function he(h){const r=[];for(let i=0;i<h.length;i++)r.push(h.charCodeAt(i)>>5);r.push(0);for(let i=0;i<h.length;i++)r.push(h.charCodeAt(i)&31);return r;}
+function cs(h,d){const v=he(h).concat(d).concat([0,0,0,0,0,0]);const m=pm(v)^1;const r=[];for(let p=0;p<6;p++)r.push((m>>(5*(5-p)))&31);return r;}
+function cb(data){let a=0,b=0;const r=[];for(const v of data){a=(a<<8)|v;b+=8;while(b>=5){b-=5;r.push((a>>b)&31);}}if(b>0)r.push((a<<(5-b))&31);return r;}
+function b32(hrp,d){const cmb=d.concat(cs(hrp,d));let s=hrp+'1';for(const x of cmb)s+=CH.charAt(x);return s;}
+function toInj(hex){const h=(hex||'').trim().replace(/^0x/i,'');if(!/^[0-9a-fA-F]{40}$/.test(h))return null;const b=[];for(let i=0;i<40;i+=2)b.push(parseInt(h.substr(i,2),16));return b32('inj',cb(b));}
+function derive(){ const v = toInj($('addr-in').value); $('inj-out').textContent = v || 'enter a valid 0x address'; }
+
+/* ---- wallet ---- */
+async function connect(){
+  if(!window.ethereum){ $('acctpill').style.display='inline-flex'; $('acctpill').textContent='no wallet'; return; }
+  try{
+    const [a] = await window.ethereum.request({ method:'eth_requestAccounts' });
+    connectedAddr = a; $('addr-in').value = a; $('insp-in').value = a; derive();
+    $('acctpill').style.display='inline-flex'; $('acctpill').textContent = a.slice(0,6)+'…'+a.slice(-4);
+    $('connect').textContent='Add Injective'; $('connect').onclick = addChain;
+    const cid = await window.ethereum.request({ method:'eth_chainId' }); setNet(parseInt(cid,16));
+    tick();
+  }catch(e){ $('acctpill').style.display='inline-flex'; $('acctpill').textContent='rejected'; }
+}
+async function addChain(){
+  try{ await window.ethereum.request({ method:'wallet_addEthereumChain', params:[{ chainId:CHAIN_HEX, chainName:'Injective EVM',
+    nativeCurrency:{name:'Injective',symbol:'INJ',decimals:18}, rpcUrls:['https://sentry.evm-rpc.injective.network'],
+    blockExplorerUrls:['https://blockscout.injective.network'] }] }); }catch(e){}
+}
+
+/* ---- native markets (LCD exchange module) ---- */
+const LCD='https://sentry.lcd.injective.network';
+let mkts={spot:null,deriv:null}, mktType='spot';
+const feePct = r => { const n=parseFloat(r); return isNaN(n)?'-':(n*100).toFixed(3)+'%'; };
+async function fetchMarkets(type){
+  const url = type==='spot' ? '/injective/exchange/v1beta1/spot/markets' : '/injective/exchange/v1beta1/derivative/markets';
+  try { const j = await (await fetch(LCD+url)).json();
+    mkts[type] = (j.markets||[]).map(m=>{ const x=m.market||m; return { ticker:x.ticker, id:x.market_id||'', taker:x.taker_fee_rate, oracle:x.oracle_type }; })
+      .filter(m=>m.ticker && m.id);
+  } catch(e){ mkts[type]=[]; }
+}
+function loadMarkets(type){
+  mktType=type;
+  $('mkt-spot').className='btn sm'+(type==='spot'?'':' g');
+  $('mkt-deriv').className='btn sm'+(type==='deriv'?'':' g');
+  renderMarkets();
+}
+function renderMarkets(){
+  const q=($('mkt-q').value||'').toLowerCase();
+  const rows=(mkts[mktType]||[]).filter(m=>m.ticker.toLowerCase().includes(q)).slice(0,80);
+  $('mkt-list').innerHTML = rows.length ? rows.map(m=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line2);font-size:11.5px">
+    <span style="font-weight:600;min-width:130px">${m.ticker}</span>
+    <span class="mono muted" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">${m.id.slice(0,12)}…</span>
+    ${m.oracle?`<span class="chip">${m.oracle}</span>`:''}
+    <span class="muted" style="white-space:nowrap">taker ${feePct(m.taker)}</span></div>`).join('')
+    : '<div class="muted" style="font-size:11.5px">no market matches</div>';
+}
+async function initMarkets(){
+  await Promise.all([ fetchMarkets('spot'), fetchMarkets('deriv') ]);
+  $('mkt-spot-n').textContent = mkts.spot?('· '+mkts.spot.length):'';
+  $('mkt-deriv-n').textContent = mkts.deriv?('· '+mkts.deriv.length):'';
+  loadMarkets('spot');
+}
+
+/* ---- wiring ---- */
+$('connect').onclick = connect;
+$('check').onclick = async ()=>{ await checkEndpoints(); tick(); };
+$('inspect').onclick = inspect;
+$('send').onclick = send;
+$('probe-all').onclick = ()=> PC.forEach((_,i)=>probePC(i));
+$('derive').onclick = derive;
+$('mkt-spot').onclick = ()=>loadMarkets('spot');
+$('mkt-deriv').onclick = ()=>loadMarkets('deriv');
+$('mkt-q').oninput = renderMarkets;
+let timer=null; $('auto').onchange = e => { if(e.target.checked) timer=setInterval(tick,8000); else clearInterval(timer); };
+setInterval(renderFeed, 2000); // keep ages fresh
+window.ethereum && window.ethereum.on && window.ethereum.on('chainChanged', ()=>location.reload());
+
+initConsole(); initPC();
+(async()=>{ await checkEndpoints(); await backfill(); await tick(); initMarkets(); })();
+</script>
+</body>
+</html>
