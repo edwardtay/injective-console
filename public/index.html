@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>Injective EVM Console</title>
-<meta name="description" content="A working dev console for Injective EVM (chain 1776): RPC failover, live block feed, a JSON-RPC console, a precompile registry that executes calls, an address inspector, and 0x-to-inj derivation. Built by Edward Tay as a work sample." />
+<meta name="description" content="A live dev console for Injective EVM (chain 1776): RPC failover, native markets, a write panel that signs and broadcasts a transaction, a JSON-RPC console, precompile probes, an address inspector, and 0x-to-inj derivation. Static, no keys." />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230e63f4'/%3E%3Ctext x='32' y='45' font-size='32' text-anchor='middle' fill='%23ffffff' font-family='monospace' font-weight='bold'%3Ei%3C/text%3E%3C/svg%3E" />
 <meta name="theme-color" content="#ffffff" />
 <meta name="robots" content="noindex" />
@@ -111,7 +111,7 @@
     <div class="bd">
       <input id="mkt-q" class="f" placeholder="filter ticker... (e.g. INJ)" style="margin-bottom:8px">
       <div id="mkt-list" style="max-height:220px;overflow:auto"><div class="muted" style="font-size:11.5px">loading markets&hellip;</div></div>
-      <div class="note">Live from the Injective LCD (exchange module), the native on-chain order book. This is the same module a Solidity contract reaches through the exchange precompile in panel 05.</div>
+      <div class="note">Live from the Injective LCD (exchange module), the native on-chain order book. This is the same module a Solidity contract reaches through the exchange precompile in panel 06.</div>
     </div>
   </div>
 
@@ -157,9 +157,25 @@
 
     <!-- RIGHT COLUMN -->
     <div class="col">
+      <!-- WRITE / SEND TX -->
+      <div class="card" style="border-color:#c6dbff">
+        <div class="hd"><h2><span class="n">04</span>Send transaction &middot; write</h2><span id="tx-net" class="lbl"></span></div>
+        <div class="bd">
+          <div class="row" style="gap:8px;margin-bottom:8px">
+            <input id="tx-to" class="f" placeholder="to (defaults to your address)" style="flex:2">
+            <input id="tx-amt" class="f" value="0" style="flex:.6;text-align:right"><span class="muted" style="font-size:11px">INJ</span>
+          </div>
+          <div class="row" style="justify-content:space-between">
+            <button id="tx-send" class="btn sm" disabled>Sign &amp; send</button>
+            <span id="tx-out" class="mono muted" style="font-size:11px">connect wallet to enable</span>
+          </div>
+          <div class="note">Signs and broadcasts a real transaction on Injective mainnet. Defaults to a 0-value self-transfer, only gas is spent. Full write path: build, wallet-sign, broadcast, confirm.</div>
+        </div>
+      </div>
+
       <!-- JSON-RPC CONSOLE -->
       <div class="card">
-        <div class="hd"><h2><span class="n">04</span>JSON-RPC console</h2><button id="send" class="btn sm">Send</button></div>
+        <div class="hd"><h2><span class="n">05</span>JSON-RPC console</h2><button id="send" class="btn sm">Send</button></div>
         <div class="bd">
           <div class="row" style="gap:8px;margin-bottom:8px">
             <select id="method" class="f" style="flex:1.4"></select>
@@ -171,7 +187,7 @@
 
       <!-- PRECOMPILE REGISTRY -->
       <div class="card">
-        <div class="hd"><h2><span class="n">05</span>Precompile registry</h2><button id="probe-all" class="btn g sm">Run all</button></div>
+        <div class="hd"><h2><span class="n">06</span>Precompile registry</h2><button id="probe-all" class="btn g sm">Run all</button></div>
         <div class="bd">
           <table class="t"><tbody id="pc-rows"></tbody></table>
           <div class="note">Standard EVM precompiles (0x01-0x09) exist on every EVM chain; the exchange precompile is Injective-native. Each row makes a real <span class="mono">eth_call</span>.</div>
@@ -180,7 +196,7 @@
 
       <!-- 0x -> inj -->
       <div class="card">
-        <div class="hd"><h2><span class="n">06</span>Address 0x &rarr; inj</h2><button id="derive" class="btn g sm">Derive</button></div>
+        <div class="hd"><h2><span class="n">07</span>Address 0x &rarr; inj</h2><button id="derive" class="btn g sm">Derive</button></div>
         <div class="bd">
           <input id="addr-in" class="f" placeholder="0x... (auto-fills on connect)">
           <div class="row" style="margin-top:9px"><span class="lbl" style="flex:none">inj</span><span id="inj-out" class="mono" style="font-size:11.5px;color:var(--acc);word-break:break-all">&middot;&middot;&middot;</span></div>
@@ -189,14 +205,14 @@
     </div>
   </div>
 
-  <div class="note">&#9432; Independent work sample by Edward Tay for an Injective Labs application. Read-only, every value is a live Injective mainnet call. Not affiliated with Injective Labs.</div>
+  <div class="note">&#9432; Live on Injective mainnet (chain 1776). Reads are free and keyless. The write panel signs and broadcasts a real transaction from your wallet, defaulting to a 0-value self-transfer, so only gas is spent (fractions of a cent).</div>
 </div>
 
 <footer>
   <a href="https://injective.edwardtay.com">&#8592; Engineering homework</a>
   <a href="https://docs.injective.network/developers-evm/precompiles" target="_blank" rel="noopener noreferrer">Precompiles docs &#8599;</a>
   <a href="https://github.com/edwardtay/injective-console" target="_blank" rel="noopener noreferrer">Source &#8599;</a>
-  <span class="mono">Injective Labs &middot; Growth / Integration Engineer &middot; edwardtay.com</span>
+  <span class="mono">Injective EVM console &middot; built by Edward Tay &middot; edwardtay.com</span>
 </footer>
 
 <script>
@@ -350,14 +366,39 @@ function b32(hrp,d){const cmb=d.concat(cs(hrp,d));let s=hrp+'1';for(const x of c
 function toInj(hex){const h=(hex||'').trim().replace(/^0x/i,'');if(!/^[0-9a-fA-F]{40}$/.test(h))return null;const b=[];for(let i=0;i<40;i+=2)b.push(parseInt(h.substr(i,2),16));return b32('inj',cb(b));}
 function derive(){ const v = toInj($('addr-in').value); $('inj-out').textContent = v || 'enter a valid 0x address'; }
 
+/* ---- 04 write: send transaction ---- */
+async function sendTx(){
+  if(!window.ethereum || !connectedAddr) return;
+  const to = ($('tx-to').value||'').trim() || connectedAddr;
+  if(!/^0x[0-9a-fA-F]{40}$/.test(to)){ $('tx-out').innerHTML='<span style="color:var(--red)">invalid recipient</span>'; return; }
+  let amt = parseFloat($('tx-amt').value||'0'); if(isNaN(amt)||amt<0) amt=0;
+  const value = '0x'+BigInt(Math.round(amt*1e18)).toString(16);
+  $('tx-send').disabled=true; $('tx-out').textContent='confirm in wallet…';
+  try{
+    const hash = await window.ethereum.request({ method:'eth_sendTransaction', params:[{ from:connectedAddr, to, value }] });
+    const link = `https://blockscout.injective.network/tx/${hash}`;
+    $('tx-out').innerHTML = `<a href="${link}" target="_blank" rel="noopener">${hash.slice(0,10)}…</a> <span class="muted">pending</span>`;
+    for(let i=0;i<30;i++){
+      await new Promise(r=>setTimeout(r,2000));
+      try{ const rc = await rpc(activeRpc,'eth_getTransactionReceipt',[hash]);
+        if(rc.result){ const ok = rc.result.status==='0x1';
+          $('tx-out').innerHTML = `<a href="${link}" target="_blank" rel="noopener">${hash.slice(0,10)}…</a> <span style="color:${ok?'var(--grn)':'var(--red)'}">${ok?'&#10003; confirmed':'failed'}</span> <span class="muted">blk ${parseInt(rc.result.blockNumber,16).toLocaleString()}</span>`;
+          if(connectedAddr){ const bal=await rpc(activeRpc,'eth_getBalance',[connectedAddr,'latest']); $('v-bal').innerHTML=fmtInj(bal.result)+' <small>INJ</small>'; }
+          break; } }catch(e){}
+    }
+  }catch(e){ $('tx-out').innerHTML='<span style="color:var(--red)">'+(e.message||'rejected').slice(0,44)+'</span>'; }
+  $('tx-send').disabled=false;
+}
+
 /* ---- wallet ---- */
 async function connect(){
   if(!window.ethereum){ $('acctpill').style.display='inline-flex'; $('acctpill').textContent='no wallet'; return; }
   try{
     const [a] = await window.ethereum.request({ method:'eth_requestAccounts' });
-    connectedAddr = a; $('addr-in').value = a; $('insp-in').value = a; derive();
+    connectedAddr = a; $('addr-in').value = a; $('insp-in').value = a; $('tx-to').value = a; derive();
     $('acctpill').style.display='inline-flex'; $('acctpill').textContent = a.slice(0,6)+'…'+a.slice(-4);
     $('connect').textContent='Add Injective'; $('connect').onclick = addChain;
+    $('tx-send').disabled=false; $('tx-out').textContent='ready (0-value self-transfer)';
     const cid = await window.ethereum.request({ method:'eth_chainId' }); setNet(parseInt(cid,16));
     tick();
   }catch(e){ $('acctpill').style.display='inline-flex'; $('acctpill').textContent='rejected'; }
@@ -407,6 +448,7 @@ $('connect').onclick = connect;
 $('check').onclick = async ()=>{ await checkEndpoints(); tick(); };
 $('inspect').onclick = inspect;
 $('send').onclick = send;
+$('tx-send').onclick = sendTx;
 $('probe-all').onclick = ()=> PC.forEach((_,i)=>probePC(i));
 $('derive').onclick = derive;
 $('mkt-spot').onclick = ()=>loadMarkets('spot');
